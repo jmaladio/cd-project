@@ -1,0 +1,106 @@
+#!/bin/bash
+
+CONFIG_FILE="$HOME/.config/cdp/projects"
+
+# Ensure the config directory exists
+mkdir -p "$(dirname "$CONFIG_FILE")"
+
+# Function to add a new project
+add_project() {
+    local path=$1
+    local alias=$2
+
+    if grep -q "^$alias:" "$CONFIG_FILE"; then
+        echo "Error: Alias '$alias' already exists."
+        exit 1
+    fi
+
+    echo "$alias:$path" >> "$CONFIG_FILE"
+    echo "Project '$alias' added."
+}
+
+# Function to list all projects
+list_projects() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "No projects found."
+        exit 0
+    fi
+
+    cat "$CONFIG_FILE"
+}
+
+# Function to remove a project
+remove_project() {
+    local alias=$1
+
+    if ! grep -q "^$alias:" "$CONFIG_FILE"; then
+        echo "Error: Alias '$alias' does not exist."
+        exit 1
+    fi
+
+    sed -i "/^$alias:/d" "$CONFIG_FILE"
+    echo "Project '$alias' removed."
+}
+
+# Function to edit a project's path
+edit_path() {
+    local alias=$1
+    local new_path=$2
+
+    if ! grep -q "^$alias:" "$CONFIG_FILE"; then
+        echo "Error: Alias '$alias' does not exist."
+        exit 1
+    fi
+
+    sed -i "s|^$alias:.*|$alias:$new_path|" "$CONFIG_FILE"
+    echo "Path for project '$alias' updated."
+}
+
+# Function to edit a project's alias
+edit_alias() {
+    local path=$1
+    local new_alias=$2
+
+    if ! grep -q ":$path$" "$CONFIG_FILE"; then
+        echo "Error: Path '$path' does not exist."
+        exit 1
+    fi
+
+    sed -i "s|.*:$path$|$new_alias:$path|" "$CONFIG_FILE"
+    echo "Alias for path '$path' updated."
+}
+
+# Function to change directory to a project
+cd_project() {
+    local alias=$1
+
+    if ! grep -q "^$alias:" "$CONFIG_FILE"; then
+        echo "Error: Alias '$alias' does not exist."
+        exit 1
+    fi
+
+    local path=$(grep "^$alias:" "$CONFIG_FILE" | cut -d':' -f2)
+    cd "$path" || exit
+}
+
+# Main script logic
+case $1 in
+    --add)
+        add_project "$2" "$3"
+        ;;
+    --list)
+        list_projects
+        ;;
+    --remove)
+        remove_project "$2"
+        ;;
+    --edit-path)
+        edit_path "$2" "$3"
+        ;;
+    --edit-alias)
+        edit_alias "$2" "$3"
+        ;;
+    *)
+        cd_project "$1"
+        ;;
+esac
